@@ -1,0 +1,1045 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f4eeff">
+<meta name="format-detection" content="telephone=no">
+<title>Ins风极简模拟手机</title>
+<style>
+  :root {
+    --primary-color: #9d7bb0;
+    --bg-gradient: radial-gradient(circle at 10% 10%, #ecdcf9, transparent 60%),
+                   radial-gradient(circle at 90% 90%, #d1bdf0, transparent 60%),
+                   #f4eeff;
+    --glass-bg: rgba(255, 255, 255, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --text-color: #4a3e59;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    background: var(--bg-gradient);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text-color);
+  }
+
+  #phone {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--bg-gradient);
+    /* ========== 新增：安全区域适配 ========== */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+
+  .screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+    display: flex; flex-direction: column;
+  }
+
+  /* 锁屏界面 */
+  #lockscreen { z-index: 10; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .lock-header { margin-top: calc(15vh + env(safe-area-inset-top) - 1rem); text-align: center; }
+  .welcome-text { font-size: 1.1rem; font-weight: 500; margin-bottom: 5px; cursor: pointer; color: var(--text-color); }
+  .lock-time { font-size: 5.5rem; font-weight: 800; line-height: 1; letter-spacing: 2px; color: var(--text-color); }
+  .lock-date { font-size: 1.2rem; margin-top: 10px; color: var(--text-color); }
+  
+  .lock-bottom { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; }
+  .circle-btn {
+    width: 50px; height: 50px; border-radius: 50%;
+    background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border: 1px solid var(--glass-border); color: var(--text-color);
+  }
+  .circle-btn:active { background: rgba(255,255,255,0.7); }
+
+  .swipe-hint { position: absolute; bottom: 15px; width: 100%; text-align: center; font-size: 0.9rem; color: #887a99; animation: bounce 2s infinite; }
+  @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
+
+  /* 密码界面 */
+  #passcode-screen { z-index: 20; background: var(--bg-gradient); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); transform: translateY(100%); padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  .passcode-title { margin-top: calc(12vh + env(safe-area-inset-top)); text-align: center; font-size: 1.5rem; font-weight: 600; }
+  .dots { display: flex; justify-content: center; gap: 20px; margin-top: 30px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--primary-color); }
+  .dot.filled { background: var(--primary-color); }
+  
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 280px; margin: 60px auto 0; }
+  .key {
+    width: 75px; height: 75px; border-radius: 50%;
+    background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 500;
+    margin: auto; cursor: pointer; color: var(--text-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  }
+  .key:active { background: rgba(255,255,255,0.8); }
+  .cancel-btn { text-align: center; margin-top: 40px; font-size: 1.1rem; cursor: pointer; color: var(--primary-color); }
+
+  /* 桌面界面 */
+  #homescreen { z-index: 5; opacity: 0; transform: scale(0.95); padding: calc(20px + var(--safe-top)) 16px calc(12px + var(--safe-bottom)); display: flex; flex-direction: column; gap: 12px; }
+  .grid-container {
+    display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(7, 1fr); gap: 12px; flex: 1; min-height: 0;
+  }
+  
+  .glass { background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+  .clickable { cursor: pointer; }
+
+  /* 第一行 */
+  .top-widgets { grid-area: 1 / 1 / 2 / 5; display: flex; align-items: center; justify-content: center; gap: 15px; }
+  .battery-widget { width: 120px; height: 40px; border-radius: 999px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; font-size: 1.1rem; }
+  .heart-widget { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary-color); }
+
+  /* 第二行：大椭圆 */
+  .big-oval { grid-area: 2 / 1 / 3 / 5; border-radius: 999px; display: flex; align-items: center; padding: 0 15px; justify-content: space-between; overflow: hidden; }
+  .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #ddd; }
+  .big-oval-mid { flex: 1; margin: 0 10px; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+  .greeting-text { font-size: 0.95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .date-text { font-size: 0.75rem; color: #666; margin-top: 3px; }
+  .big-oval-right { text-align: right; min-width: 60px; }
+  .temp-text { font-size: 1.3rem; font-weight: 800; }
+  .loc-text { font-size: 0.7rem; color: #666; margin-top: 2px; }
+
+  /* 第三、四行：图片组件 */
+  .img-widget { border-radius: 20px; background-size: cover; background-position: center; background-color: #f0f0f0; }
+  .img-widget-1 { grid-area: 3 / 1 / 5 / 3; background: linear-gradient(135deg, #f3d9e8, #c9a8d9); }
+  .img-widget-2 { grid-area: 3 / 3 / 5 / 5; background: linear-gradient(135deg, #d4c5ec, #a890c7); }
+
+  /* 第五、六行：App 和 音乐 */
+  .app-icon { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+  .app-icon-inner { width: 55px; height: 55px; border-radius: 16px; background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--primary-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden; }
+  .app-label { font-size: 0.7rem; margin-top: 5px; font-weight: 500; }
+  .app-1 { grid-area: 5 / 1 / 6 / 2; }
+  .app-2 { grid-area: 5 / 2 / 6 / 3; }
+  .app-3 { grid-area: 6 / 1 / 7 / 2; }
+  .app-4 { grid-area: 6 / 2 / 7 / 3; }
+  .note-strip { grid-area: 7 / 1 / 8 / 5; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 24px; overflow: hidden; }
+  .note-text { font-family: 'Snell Roundhand', 'Lucida Handwriting', 'Brush Script MT', cursive; font-size: 1.15rem; font-weight: 600; color: var(--text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 1px; cursor: pointer; text-align: center; width: 100%; font-style: italic; }
+  
+  .music-widget { grid-area: 5 / 3 / 7 / 5; border-radius: 24px; display: flex; flex-direction: column; padding: 10px; justify-content: space-between; position: relative; overflow: hidden; min-height: 0; }
+  .record-player { position: relative; width: 70px; height: 70px; margin: 4px auto 0; flex-shrink: 0; }
+  .record-disk { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 3px solid #333; animation: spin 5s linear infinite; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .tonearm { position: absolute; top: -6px; right: -6px; width: 26px; height: 40px; border-right: 2px solid #a493b8; border-top: 2px solid #a493b8; border-top-right-radius: 10px; transform-origin: top right; transform: rotate(20deg); z-index: 2; }
+  .tonearm::after { content: ''; position: absolute; bottom: 0; right: -4px; width: 5px; height: 10px; background: #a493b8; border-radius: 2px; transform: rotate(-20deg); }
+  .tonearm::before { content: ''; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; background: #e0d5ed; border: 2px solid #a493b8; border-radius: 50%; }
+  .music-bottom-half { text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 2px; min-height: 0; }
+  .song-name { font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color); }
+  .artist-name { font-size: 0.62rem; color: #887a99; margin: 2px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .music-controls { display: flex; justify-content: center; gap: 10px; align-items: center; color: var(--text-color); }
+  .music-controls svg { cursor: pointer; }
+
+  /* Dock栏 */
+  .dock { height: 90px; border-radius: 30px; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; }
+  .dock .app-icon-inner { width: 60px; height: 60px; background: rgba(255,255,255,0.5); }
+  .dock .app-label { display: none; } /* Dock栏不显示文字 */
+
+  /* 模态框 */
+  #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); backdrop-filter: blur(5px); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+  #modal { background: var(--bg-gradient); width: 80%; max-width: 320px; border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); transform: scale(0.9); transition: transform 0.3s; border: 1px solid var(--glass-border); backdrop-filter: blur(20px); }
+  #modal-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: var(--text-color); }
+  #modal-input { width: 100%; padding: 12px; border: 1px solid var(--glass-border); border-radius: 10px; font-size: 1rem; outline: none; background: rgba(255,255,255,0.5); color: var(--text-color); margin-bottom: 15px; }
+  #modal-file { display: none; }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; cursor: pointer; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-color); }
+  .btn-confirm { background: var(--primary-color); color: #fff; border: none; }
+
+  /* 隐藏文件输入用于相机 */
+  #camera-input { display: none; }
+
+  /* 设置界面 */
+  #settings-screen, #api-screen { z-index: 40; transform: translateX(100%); background: var(--bg-gradient); padding: 50px 20px 20px; overflow-y: auto; }
+  #api-screen { z-index: 50; }
+  .settings-header { display: flex; align-items: center; gap: 12px; margin-bottom: 25px; }
+  .back-btn { width: 38px; height: 38px; border-radius: 50%; background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+  .back-btn:active { background: rgba(255,255,255,0.7); }
+  .settings-title { font-size: 1.5rem; font-weight: 700; color: var(--text-color); }
+  .settings-list { display: flex; flex-direction: column; gap: 12px; }
+  .settings-item { display: flex; align-items: center; padding: 16px 18px; border-radius: 16px; background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.04); cursor: pointer; gap: 14px; color: var(--text-color); }
+  .settings-item:active { background: rgba(255,255,255,0.6); }
+  .settings-item-icon { width: 32px; height: 32px; border-radius: 10px; background: rgba(255,255,255,0.5); display: flex; align-items: center; justify-content: center; color: var(--primary-color); flex-shrink: 0; }
+  .settings-item-label { flex: 1; font-size: 0.95rem; font-weight: 500; }
+  .settings-item-arrow { color: #b0a3c2; }
+
+  /* API 设置 */
+  .api-section { background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+  .api-section-title { font-size: 0.8rem; font-weight: 600; color: #887a99; margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .api-field { margin-bottom: 12px; }
+  .api-field:last-child { margin-bottom: 0; }
+  .api-label { font-size: 0.8rem; color: var(--text-color); margin-bottom: 6px; font-weight: 500; }
+  .api-input, .api-select { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.5); font-size: 0.9rem; color: var(--text-color); outline: none; font-family: inherit; }
+  .api-input:focus, .api-select:focus { background: rgba(255,255,255,0.8); }
+  .api-btn-row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .api-btn { flex: 1; min-width: 80px; padding: 10px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.5); color: var(--text-color); font-size: 0.85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .api-btn:active { background: rgba(255,255,255,0.8); }
+  .api-btn.primary { background: var(--primary-color); color: #fff; border: none; }
+  .api-btn.danger { color: #d97a8c; }
+  .api-status { font-size: 0.75rem; color: #887a99; margin-top: 8px; min-height: 16px; }
+
+  /* 美化设置 */
+  #beauty-screen { z-index: 50; transform: translateX(100%); background: var(--bg-gradient); padding: 50px 20px 20px; overflow-y: auto; }
+  .beauty-section { background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+  .beauty-section-title { font-size: 0.8rem; font-weight: 600; color: #887a99; margin-bottom: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .beauty-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; gap: 12px; }
+  .beauty-row + .beauty-row { border-top: 1px solid rgba(255,255,255,0.4); }
+  .beauty-label { font-size: 0.9rem; color: var(--text-color); flex: 1; }
+  .beauty-action { font-size: 0.85rem; color: var(--primary-color); font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 10px; background: rgba(255,255,255,0.5); border: 1px solid var(--glass-border); }
+  .beauty-action:active { background: rgba(255,255,255,0.8); }
+  .danger-action { color: #d97a8c; }
+  /* 开关 */
+  .switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background: rgba(180,170,200,0.4); border-radius: 999px; transition: .3s; }
+  .slider:before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .3s; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+  .switch input:checked + .slider { background: var(--primary-color); }
+  .switch input:checked + .slider:before { transform: translateX(20px); }
+  /* 单选 */
+  .pass-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .pass-opt { flex: 1; min-width: 60px; padding: 10px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.4); text-align: center; font-size: 0.85rem; cursor: pointer; color: var(--text-color); font-weight: 500; }
+  .pass-opt.active { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+  /* 图标网格 */
+  .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+  .icon-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+  .icon-cell-img { width: 50px; height: 50px; border-radius: 14px; background: rgba(255,255,255,0.5); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; color: var(--primary-color); overflow: hidden; }
+  .icon-cell-img img { width: 100%; height: 100%; object-fit: cover; }
+  .icon-cell-label { font-size: 0.7rem; color: var(--text-color); }
+  /* 壁纸预览 */
+  .wallpaper-preview { width: 60px; height: 60px; border-radius: 12px; background-size: cover; background-position: center; border: 1px solid var(--glass-border); flex-shrink: 0; background-color: rgba(255,255,255,0.3); }
+
+  /* 微信 App */
+  #wechat-screen { z-index: 35; background: #ededed; display: flex; flex-direction: column; transform: scale(0.8); opacity: 0; pointer-events: none; transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  #wechat-screen.active { transform: scale(1); opacity: 1; pointer-events: auto; }
+  .wx-header { padding: 50px 15px 15px; background: #ededed; display: flex; justify-content: space-between; align-items: center; position: relative; }
+  .wx-header::after { content:''; position:absolute; bottom:0; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:scaleY(0.5); }
+  .wx-title { font-size: 1.1rem; font-weight: 600; color: #191919; }
+  .wx-content { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .wx-tabbar { height: 80px; background: #f7f7f7; display: flex; padding-bottom: 20px; position: relative; }
+  .wx-tabbar::before { content:''; position:absolute; top:0; left:0; width:100%; height:1px; background:rgba(0,0,0,0.1); transform:scaleY(0.5); }
+  .wx-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #191919; cursor: pointer; opacity: 0.5; }
+  .wx-tab-item.active { color: #07c160; opacity: 1; }
+  .wx-tab-item svg { width: 26px; height: 26px; }
+  .wx-tab-item span { font-size: 0.65rem; font-weight: 500; }
+  
+  .wx-chat-item { display: flex; padding: 12px 15px; background: #fff; align-items: center; position: relative; cursor: pointer; }
+  .wx-chat-item:active { background: #f0f0f0; }
+  .wx-chat-item::after { content:''; position:absolute; bottom:0; left:75px; right:0; height:1px; background:rgba(0,0,0,0.1); transform:scaleY(0.5); }
+  .wx-avatar { width: 48px; height: 48px; border-radius: 6px; background: #ccc; flex-shrink: 0; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 1.2rem; font-weight: bold; }
+  .wx-chat-info { flex: 1; margin-left: 12px; overflow: hidden; }
+  .wx-chat-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .wx-chat-name { font-size: 1.05rem; color: #191919; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wx-chat-time { font-size: 0.75rem; color: #b2b2b2; }
+  .wx-chat-row2 { font-size: 0.85rem; color: #b2b2b2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .wx-discover-item, .wx-me-item { display: flex; align-items: center; padding: 15px; background: #fff; margin-bottom: 8px; position: relative; cursor:pointer;}
+  .wx-discover-item:active, .wx-me-item:active { background: #f0f0f0; }
+  .wx-me-header { display: flex; padding: 40px 20px 30px; background: #fff; margin-bottom: 8px; align-items: center; gap: 15px;}
+  .wx-me-header .wx-avatar { width: 65px; height: 65px; border-radius: 8px; font-size: 1.5rem; }
+  .wx-me-info { flex: 1; }
+  .wx-me-name { font-size: 1.3rem; font-weight: 600; color: #191919; margin-bottom: 5px; }
+  .wx-me-id { font-size: 0.9rem; color: #b2b2b2; }
+  
+  .wx-home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 130px; height: 5px; background: #191919; border-radius: 10px; z-index: 100; cursor: pointer;}
+
+  /* 微信子页面通用 (Ins韩系) */
+  .wx-sub-screen { position: absolute; top:0; left:0; width:100%; height:100%; background:#faf8fc; z-index:50; transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1); display:flex; flex-direction: column; }
+  .wx-sub-screen.active { transform: translateX(0); }
+  .wx-sub-header { padding: 44px 20px 12px; background: #faf8fc; display: flex; justify-content: space-between; align-items: center; position: relative; flex-shrink:0; }
+  .wx-sub-title { font-size: 16px; font-weight: 600; color: var(--text-color); position: absolute; left: 50%; transform: translateX(-50%); letter-spacing: 0.5px; }
+  .wx-sub-content { flex: 1; overflow-y: auto; overflow-x: hidden; background: transparent; position: relative; }
+  
+  /* 朋友圈 */
+  .moments-bg { height: 300px; background: #333; background-size: cover; background-position: center; position: relative; cursor: pointer; }
+  .moments-user-info { position: absolute; bottom: -20px; right: 16px; display: flex; align-items: flex-start; gap: 12px; }
+  .moments-name { color: #fff; font-size: 18px; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5); margin-top: 10px; }
+  .moments-avatar { width: 64px; height: 64px; border-radius: 8px; background: #9d7bb0; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; cursor: pointer; object-fit: cover; border:2px solid #fff; }
+  .moments-sign { padding: 30px 20px 10px; text-align: right; font-size: 14px; color: #b2b2b2; cursor: pointer; }
+
+  /* 商店 */
+  .shop-search-bar { flex:1; margin: 0 15px; background: #fff; border-radius: 16px; height: 32px; display: flex; align-items: center; padding: 0 10px; }
+  .shop-search-bar input { border: none; outline: none; background: transparent; width: 100%; font-size: 14px; }
+  .shop-tabbar { height: 50px; background: #fff; display: flex; border-top: 1px solid rgba(0,0,0,0.05); padding-bottom: 20px; flex-shrink:0; }
+  .shop-tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; color: #666; gap: 4px; cursor: pointer; }
+  .shop-tab.active { color: #fa9d3b; }
+</style>
+</head>
+<body>
+
+<div id="phone">
+  <!-- 锁屏 -->
+  <div id="lockscreen" class="screen">
+    <div class="lock-header">
+      <div class="welcome-text" id="welcomeText" onclick="openModal('修改欢迎语', 'welcomeText', 'text')">Welcome back</div>
+      <div class="lock-time" id="time-display">00:00</div>
+      <div class="lock-date" id="date-display">1月1日 星期一</div>
+    </div>
+    
+    <div class="lock-bottom">
+      <div class="circle-btn" onclick="toggleFlashlight()">
+        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h8M8 6v5l-2 3v8h12v-8l-2-3V6M8 6L7 3h10l-1 3"/></svg>
+      </div>
+      <div class="circle-btn" onclick="document.getElementById('camera-input').click()">
+        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+      </div>
+    </div>
+    <div class="swipe-hint">Swipe up to unlock</div>
+  </div>
+
+  <!-- 密码 -->
+  <div id="passcode-screen" class="screen">
+    <div class="passcode-title">Enter Passcode</div>
+    <div class="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="keypad">
+      <div class="key" onclick="enterPasscode(1)">1</div><div class="key" onclick="enterPasscode(2)">2</div><div class="key" onclick="enterPasscode(3)">3</div>
+      <div class="key" onclick="enterPasscode(4)">4</div><div class="key" onclick="enterPasscode(5)">5</div><div class="key" onclick="enterPasscode(6)">6</div>
+      <div class="key" onclick="enterPasscode(7)">7</div><div class="key" onclick="enterPasscode(8)">8</div><div class="key" onclick="enterPasscode(9)">9</div>
+      <div class="key" style="font-size:0.9rem;" onclick="cancelPasscode()">返回</div><div class="key" onclick="enterPasscode(0)">0</div><div class="key" style="font-size:0.9rem;" onclick="backspacePasscode()">取消</div>
+    </div>
+  </div>
+
+  <!-- 桌面 -->
+  <div id="homescreen" class="screen">
+    <div class="grid-container">
+      <!-- 行1 -->
+      <div class="top-widgets">
+        <div class="glass battery-widget">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>
+          <span id="battery-level">100%</span>
+        </div>
+        <div class="glass heart-widget">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="1.5" fill="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+      </div>
+      
+      <!-- 行2 -->
+      <div class="glass big-oval">
+        <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='%23d4c5ec'/%3E%3Ccircle cx='25' cy='20' r='8' fill='%23fff'/%3E%3Cpath d='M10 45 Q25 30 40 45' fill='%23fff'/%3E%3C/svg%3E" class="avatar clickable" id="avatarImg" onclick="openModal('更换头像', 'avatarImg', 'image')">
+        <div class="big-oval-mid">
+          <div class="greeting-text clickable" id="greetingText" onclick="openModal('修改问候语', 'greetingText', 'text')">Have a good day</div>
+          <div class="date-text" id="home-date">1月1日 周一</div>
+        </div>
+        <div class="big-oval-right">
+          <div class="temp-text clickable" id="tempText" onclick="openModal('修改气温', 'tempText', 'text')">25°</div>
+          <div class="loc-text clickable" id="locText" onclick="openModal('修改地址', 'locText', 'text')">Seoul</div>
+        </div>
+      </div>
+
+      <!-- 行3,4 -->
+      <div class="glass img-widget img-widget-1 clickable" id="img1" onclick="openModal('更换图片1', 'img1', 'bg-image')"></div>
+      <div class="glass img-widget img-widget-2 clickable" id="img2" onclick="openModal('更换图片2', 'img2', 'bg-image')"></div>
+
+      <!-- 行5,6 Apps -->
+      <div class="app-icon app-1" onclick="openWechat()">
+        <div class="app-icon-inner" id="icon-wechat">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        </div>
+        <div class="app-label">WeChat</div>
+      </div>
+      <div class="app-icon app-2">
+        <div class="app-icon-inner" id="icon-couple">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        </div>
+        <div class="app-label">Couple</div>
+      </div>
+      <div class="app-icon app-3">
+        <div class="app-icon-inner" id="icon-find">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+        </div>
+        <div class="app-label">Check</div>
+      </div>
+      <div class="app-icon app-4" onclick="openSettings()">
+        <div class="app-icon-inner" id="icon-settings">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </div>
+        <div class="app-label">Settings</div>
+      </div>
+      <!-- 第七行：花字便签 -->
+      <div class="glass note-strip">
+        <div class="note-text" id="noteText" onclick="openModal('修改便签文字', 'noteText', 'text')">Stay gentle, stay shining</div>
+      </div>
+
+      <!-- 行5,6 音乐 -->
+      <div class="glass music-widget">
+        <div class="record-player">
+          <div class="tonearm"></div>
+          <img src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 90'%3E%3Ccircle cx='45' cy='45' r='45' fill='%23333'/%3E%3Ccircle cx='45' cy='45' r='28' fill='%23a890c7'/%3E%3Ccircle cx='45' cy='45' r='7' fill='%23333'/%3E%3C/svg%3E" class="record-disk clickable" id="musicCover" onclick="openModal('更换专辑封面', 'musicCover', 'image')">
+        </div>
+        <div class="music-bottom-half">
+          <div class="song-name clickable" id="songName" onclick="openModal('修改歌名', 'songName', 'text')">Ditto</div>
+          <div class="artist-name clickable" id="artistName" onclick="openModal('修改歌手', 'artistName', 'text')">NewJeans</div>
+          <div class="music-controls">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dock -->
+    <div class="glass dock">
+      <div class="app-icon">
+        <div class="app-icon-inner" id="icon-phone">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        </div>
+        <div class="app-label">Phone</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-inner" id="icon-messages">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        </div>
+        <div class="app-label">Messages</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-inner" id="icon-music">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+        </div>
+        <div class="app-label">Music</div>
+      </div>
+      <div class="app-icon">
+        <div class="app-icon-inner" id="icon-safari">
+          <svg viewBox="0 0 24 24" width="28" height="28" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        </div>
+        <div class="app-label">Safari</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 微信 App 界面 -->
+<div id="wechat-screen" class="screen">
+  <div class="wx-header">
+    <div onclick="closeWechat()" style="display:flex; align-items:center; cursor:pointer; color:#191919; z-index:10;">
+      <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </div>
+    <div class="wx-title" id="wx-main-title">微信</div>
+    <div onclick="toggleAddMenu(event)" style="display:flex; align-items:center; cursor:pointer; color:#191919; z-index:10; position:relative;">
+      <svg viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <div id="wx-add-menu" style="display:none; position:absolute; top:36px; right:0; background:#2c2c2c; border-radius:14px; padding:6px 0; min-width:140px; box-shadow:0 8px 24px rgba(0,0,0,0.3); z-index:20;">
+        <div onclick="openAddFriend(event)" style="padding:12px 18px; color:#fff; font-size:14px; display:flex; align-items:center; gap:10px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+          添加好友
+        </div>
+        <div onclick="openCreateGroup(event)" style="padding:12px 18px; color:#fff; font-size:14px; display:flex; align-items:center; gap:10px;">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          发起群聊
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="wx-content">
+    <!-- 消息 -->
+    <div id="wx-page-chat" class="wx-tab-page" style="background:#faf8fc; min-height:100%;">
+      <div id="chat-friends-list"></div>
+      <div id="chat-empty-hint" style="text-align:center; padding-top:120px;">
+        <svg viewBox="0 0 24 24" width="48" height="48" stroke="#d1c9db" stroke-width="1" fill="none" style="margin-bottom:15px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+        <div style="color:#b2b2b2; font-size:14px; letter-spacing:1px; font-weight:500;">暂无聊天记录</div>
+        <div style="color:#d1c9db; font-size:12px; margin-top:8px;">点击右上角 + 添加好友</div>
+      </div>
+    </div>
+
+    <!-- 通讯录 -->
+    <div id="wx-page-contact" class="wx-tab-page" style="display:none; background:#faf8fc; min-height:100%; padding:15px;">
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02); margin-bottom:14px;">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-contact-sub-screen')" style="border-radius:18px; border:none; margin-bottom:0;"><div class="wx-chat-name" style="font-weight:600; font-size:15px;">联系人管理</div></div>
+        <div class="wx-discover-item" style="border-radius:18px; border:none; margin-bottom:0;"><div class="wx-chat-name" style="font-weight:600; font-size:15px;">标签</div></div>
+      </div>
+      <div id="contact-page-friends-container"></div>
+      <div id="contact-page-groups-container" style="margin-top:14px;"></div>
+      <div id="contact-page-empty" style="text-align:center; padding-top:60px; display:none;">
+        <svg viewBox="0 0 24 24" width="48" height="48" stroke="#d1c9db" stroke-width="1" fill="none" style="margin-bottom:15px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+        <div style="color:#b2b2b2; font-size:14px; letter-spacing:1px; font-weight:500;">目前没有好友</div>
+        <div style="color:#d1c9db; font-size:12px; margin-top:8px;">点击微信页右上角 + 添加</div>
+      </div>
+    </div>
+
+    <!-- 发现 -->
+    <div id="wx-page-discover" class="wx-tab-page" style="display:none; background:#faf8fc; min-height:100%; padding:15px;">
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-moments-screen')" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#07c160" stroke-width="2" fill="none" style="margin-right:15px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">朋友圈</div>
+        </div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02); margin-top:15px;">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-worldbook-screen')" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#10aeff" stroke-width="2" fill="none" style="margin-right:15px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">世界书</div>
+        </div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02); margin-top:15px;">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-shop-screen')" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#fa9d3b" stroke-width="2" fill="none" style="margin-right:15px;"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">商店</div>
+        </div>
+        <div class="wx-discover-item" onclick="openOfflineMain()" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#a8c5a0" stroke-width="2" fill="none" style="margin-right:15px;"><path d="M17 8h1a4 4 0 0 1 0 8h-1M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v3M10 2v3M14 2v3"/></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">线下</div>
+        </div>
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-contact-sub-screen')" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#5a8edb" stroke-width="2" fill="none" style="margin-right:15px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">联系人</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 我 -->
+    <div id="wx-page-me" class="wx-tab-page" style="display:none; background:#faf8fc; min-height:100%; padding:15px;">
+      <div class="wx-me-header" style="background:#fff; border-radius:28px; padding:30px 20px; box-shadow:0 8px 25px rgba(0,0,0,0.03); margin-bottom:20px; align-items:center;">
+        <img id="meAvatar" onclick="openModal('更换头像', 'meAvatar', 'image')" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='%239d7bb0'/%3E%3Ctext x='25' y='32' font-size='20' fill='%23fff' text-anchor='middle'%3E我%3C/text%3E%3C/svg%3E" style="width:70px; height:70px; border-radius:22px; object-fit:cover; cursor:pointer; border:1px solid rgba(0,0,0,0.05);">
+        <div class="wx-me-info" style="margin-left:15px; flex:1;">
+          <div class="wx-me-name" id="meName" style="font-size:1.4rem; font-weight:700; color:#191919; margin-bottom:6px;">我的昵称</div>
+          <div class="wx-me-id" id="meIdDisplay" style="font-size:0.85rem; color:#999;">微信号：wx_xxxxxx</div>
+        </div>
+        <div onclick="openProfileEdit()" style="padding:8px 14px; background:#f5f5f7; color:var(--text-color); border-radius:18px; font-size:13px; font-weight:600; cursor:pointer; flex-shrink:0;">编辑资料</div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02); margin-bottom:15px;">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-wallet-screen'); renderWallet();" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#07c160" stroke-width="2" fill="none" style="margin-right:15px;"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">钱包</div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-mask-list-screen'); renderMaskList();" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#5a8edb" stroke-width="2" fill="none" style="margin-right:15px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">面具</div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div class="wx-discover-item" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#fa9d3b" stroke-width="2" fill="none" style="margin-right:15px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">收藏</div>
+        </div>
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-wxsettings-screen')" style="border-radius:18px; border:none; margin-bottom:0;">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="#10aeff" stroke-width="2" fill="none" style="margin-right:15px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <div class="wx-chat-name" style="flex:1; font-weight:600; font-size:15px;">设置</div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="wx-tabbar">
+    <div class="wx-tab-item active" onclick="switchWxTab('chat', this)">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+      <span>微信</span>
+    </div>
+    <div class="wx-tab-item" onclick="switchWxTab('contact', this)">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      <span>通讯录</span>
+    </div>
+    <div class="wx-tab-item" onclick="switchWxTab('discover', this)">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"></path></svg>
+      <span>发现</span>
+    </div>
+    <div class="wx-tab-item" onclick="switchWxTab('me', this)">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+      <span>我</span>
+    </div>
+  </div>
+  <!-- 底部手势横条，点击退回桌面 -->
+  <div class="wx-home-indicator" onclick="closeWechat()"></div>
+
+  <!-- 个人资料编辑子页面 -->
+  <div id="wx-profile-edit-screen" class="wx-sub-screen" style="z-index:60; background:#faf8fc;">
+    <div class="wx-sub-header">
+      <div onclick="closeProfileEdit()" style="cursor:pointer; color:#191919;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">个人信息</div>
+      <div onclick="saveProfile()" style="cursor:pointer; color:#bba3d4; font-weight:700; font-size:15px;">保存</div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px; display:flex; flex-direction:column; gap:16px;">
+      <div style="background:#fff; border-radius:28px; padding:30px; box-shadow:0 8px 25px rgba(0,0,0,0.03); display:flex; flex-direction:column; align-items:center; gap:12px;">
+        <img id="editMeAvatar" onclick="openModal('更换头像', 'editMeAvatar', 'image')" src="" style="width:85px; height:85px; border-radius:26px; object-fit:cover; border:1px solid rgba(0,0,0,0.05); cursor:pointer;">
+        <div style="font-size:12px; color:#bba3d4; font-weight:600; cursor:pointer;" onclick="openModal('更换头像', 'editMeAvatar', 'image')">点击更换头像</div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:10px 24px; box-shadow:0 4px 15px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; align-items:center; border-bottom:1px solid rgba(0,0,0,0.03); padding:14px 0;">
+          <span style="width:65px; font-size:15px; color:#666; font-weight:500;">昵称</span>
+          <input type="text" id="editMeName" placeholder="填写昵称" style="flex:1; border:none; outline:none; font-size:15px; color:var(--text-color); font-weight:600; background:transparent;">
+        </div>
+        <div style="display:flex; align-items:center; padding:14px 0;">
+          <span style="width:65px; font-size:15px; color:#666; font-weight:500;">微信号</span>
+          <input type="text" id="editMeId" placeholder="填写微信号" style="flex:1; border:none; outline:none; font-size:15px; color:var(--text-color); font-weight:600; background:transparent;">
+        </div>
+      </div>
+      <div onclick="openMaskSelect()" style="background:#fff; border-radius:24px; padding:18px 24px; box-shadow:0 4px 15px rgba(0,0,0,0.02); display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-top:4px;">
+        <span style="font-size:15px; color:#666; font-weight:500;">选择面具</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+           <span id="selectedMaskName" style="font-size:15px; color:#bba3d4; font-weight:600;">未选择</span>
+           <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 面具选择弹窗 -->
+  <div id="mask-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.4); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:100; display:none; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s;">
+    <div id="mask-modal" style="background:#fff; width:80%; max-width:320px; border-radius:32px; padding:24px; box-shadow:0 20px 40px rgba(157,123,176,0.15); transform:scale(0.9); transition:transform 0.3s; border:1px solid rgba(157,123,176,0.1); display:flex; flex-direction:column;">
+      <div style="text-align:center; font-size:16px; font-weight:700; color:var(--text-color); margin-bottom:20px; letter-spacing:1px;">选择面具</div>
+      <div id="mask-list-container" style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding-right:4px;">
+         <!-- list items -->
+      </div>
+      <div onclick="closeMaskSelect()" style="margin-top:20px; padding:14px; text-align:center; background:#f0eef5; color:var(--text-color); border-radius:20px; font-size:14px; font-weight:600; cursor:pointer;">取消</div>
+    </div>
+  </div>
+
+  <!-- 朋友圈子页面 -->
+  <div id="wx-moments-screen" class="wx-sub-screen">
+    <div class="wx-sub-header" style="background:transparent; position:absolute; left:0; right:0; border:none; z-index:10; display:flex; justify-content:space-between; align-items:center; padding:44px 20px 12px;">
+      <div onclick="closeWxSubScreen('wx-moments-screen')" style="color:#fff; cursor:pointer;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div onclick="openPostMoment()" style="color:#fff; cursor:pointer;"><svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+    </div>
+    <div class="wx-sub-content">
+      <div class="moments-bg" id="momentsBg" onclick="openModal('更换朋友圈背景', 'momentsBg', 'bg-image')">
+        <div class="moments-user-info">
+          <div class="moments-name">我</div>
+          <img class="moments-avatar" id="momentsAvatar" onclick="openModal('更换头像', 'momentsAvatar', 'image'); event.stopPropagation();" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='%239d7bb0'/%3E%3Ctext x='25' y='32' font-size='20' fill='%23fff' text-anchor='middle'%3E我%3C/text%3E%3C/svg%3E">
+        </div>
+      </div>
+      <div class="moments-sign" id="momentsSign" onclick="openModal('修改个性签名', 'momentsSign', 'text')">点击设置个性签名</div>
+      <div id="moments-feed" style="padding:0 0 40px;"></div>
+    </div>
+  </div>
+
+  <!-- 发布朋友圈 -->
+  <div id="wx-post-moment-screen" class="wx-sub-screen" style="z-index:65;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-post-moment-screen')" style="cursor:pointer; color:var(--text-color); font-size:14px; font-weight:600;">取消</div>
+      <div class="wx-sub-title">发表动态</div>
+      <div onclick="submitMoment()" style="cursor:pointer; color:var(--text-color); font-weight:700; font-size:15px;">发表</div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px;">
+      <textarea id="moment-text" placeholder="这一刻的想法..." style="width:100%; min-height:140px; border:none; outline:none; font-size:15px; line-height:1.6; color:var(--text-color); background:transparent; resize:none; font-family:inherit;"></textarea>
+      <div id="moment-img-preview" style="display:none; margin-top:14px; border-radius:18px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05);"><img id="moment-img-el" style="width:100%; display:block;"></div>
+      <input type="file" id="moment-img-file" accept="image/*" style="display:none;" onchange="handleMomentImg(this)">
+      <div onclick="document.getElementById('moment-img-file').click()" style="margin-top:18px; padding:14px; background:#fff; border-radius:16px; display:flex; align-items:center; gap:12px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="width:34px; height:34px; border-radius:10px; background:#f5eef7; color:#bba3d4; display:flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="M21 16l-5-5L5 21"/></svg></div>
+        <div style="flex:1; font-size:14px; color:var(--text-color); font-weight:500;">添加图片</div>
+        <span id="moment-img-status" style="font-size:12px; color:#bba3d4;"></span>
+      </div>
+      <div onclick="openMomentLocation()" style="margin-top:10px; padding:14px; background:#fff; border-radius:16px; display:flex; align-items:center; gap:12px; cursor:pointer; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="width:34px; height:34px; border-radius:10px; background:#eef3f5; color:#9ab5be; display:flex; align-items:center; justify-content:center;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div style="flex:1; font-size:14px; color:var(--text-color); font-weight:500;">所在位置</div>
+        <span id="moment-loc-status" style="font-size:12px; color:#bba3d4;">不显示</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 世界书子页面 -->
+  <div id="wx-worldbook-screen" class="wx-sub-screen">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-worldbook-screen')" style="cursor:pointer; color:#191919;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">世界书</div>
+      <div onclick="openWbEdit(-1)" style="cursor:pointer; font-size:24px; color:#191919; line-height:1;">+</div>
+    </div>
+    <div class="wx-sub-content" id="wb-list-container" style="padding:15px; display:flex; flex-direction:column; gap:10px; background:#f7f7f7;"></div>
+  </div>
+
+  <!-- 世界书编辑 -->
+  <div id="wx-wb-edit-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-wb-edit-screen')" style="cursor:pointer; color:#191919;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title" id="wb-edit-title">添加世界书</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+      <input type="text" id="wb-edit-title-input" placeholder="世界名称..." style="width:100%; border:none; background:#fdfcfeb3; padding:16px 20px; border-radius:20px; font-size:16px; font-weight:600; outline:none; color:var(--text-color); border: 1px solid rgba(0,0,0,0.03); box-shadow:0 4px 12px rgba(0,0,0,0.02);">
+      <textarea id="wb-edit-content" style="width:100%; flex:1; min-height:220px; border:none; background:#fdfcfeb3; padding:20px; border-radius:20px; font-size:14px; line-height:1.6; outline:none; color:var(--text-color); border: 1px solid rgba(0,0,0,0.03); box-shadow:0 4px 12px rgba(0,0,0,0.02); resize:none;" placeholder="记录这个世界的设定..."></textarea>
+      <div style="display:flex; gap:12px; margin-top:8px;">
+        <button style="flex:1; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;" onclick="saveWorldBook()">保存</button>
+        <button style="flex:1; padding:14px; background:#f0eef5; color:var(--text-color); border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;" onclick="deleteWorldBook()">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 联系人子页面 -->
+  <div id="wx-contact-sub-screen" class="wx-sub-screen">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-contact-sub-screen')" style="cursor:pointer; color:#191919;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">联系人</div>
+      <div onclick="openContactEdit(-1)" style="cursor:pointer; font-size:24px; color:#191919; line-height:1;">+</div>
+    </div>
+    <div class="wx-sub-content" id="contact-list-container" style="background:#f7f7f7;"></div>
+  </div>
+
+  <!-- 联系人编辑 -->
+  <div id="wx-contact-edit-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-contact-edit-screen')" style="cursor:pointer; color:#191919;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title" id="contact-edit-title">设置角色</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; gap:16px;">
+        <img id="contactEditAvatar" onclick="openModal('更换头像', 'contactEditAvatar', 'image')" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='%23f5f5f7'/%3E%3Ctext x='25' y='32' font-size='20' fill='%23ccc' text-anchor='middle'%3E+%3C/text%3E%3C/svg%3E" style="width:65px; height:65px; background:#f8f8f8; border:1px solid rgba(0,0,0,0.05); border-radius:22px; object-fit:cover; cursor:pointer;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:10px; justify-content:center;">
+           <input type="text" id="contact-edit-name" placeholder="名字" style="width:100%; border:1px solid rgba(0,0,0,0.03); background:#fdfcfeb3; padding:10px 14px; border-radius:14px; outline:none; font-size:15px; color:var(--text-color); box-shadow:0 2px 8px rgba(0,0,0,0.01);">
+           <input type="file" id="import-char-file" accept=".txt,.json" style="display:none;" onchange="handleImportChar(event)">
+           <button style="padding:8px; font-size:12px; border-radius:12px; border:1px solid rgba(0,0,0,0.1); color:#666; background:#fff; font-weight:600; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.02);" onclick="document.getElementById('import-char-file').click()">+ 导入角色设定</button>
+        </div>
+      </div>
+      <textarea id="contact-edit-persona" placeholder="输入人设细节..." style="width:100%; flex:1; min-height:180px; border:1px solid rgba(0,0,0,0.03); background:#fdfcfeb3; padding:16px 20px; border-radius:20px; outline:none; font-size:14px; line-height:1.6; color:var(--text-color); resize:none; box-shadow:0 4px 12px rgba(0,0,0,0.02);"></textarea>
+      <div style="display:flex; gap:12px; margin-top:8px;">
+        <button style="flex:1; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;" onclick="saveContact()">保存</button>
+        <button style="flex:1; padding:14px; background:#f0eef5; color:var(--text-color); border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;" onclick="deleteContact()">删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 选择联系人（添加好友/群聊共用） -->
+  <div id="wx-pick-contact-screen" class="wx-sub-screen" style="z-index:55;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-pick-contact-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title" id="pick-contact-title">选择联系人</div>
+      <div onclick="confirmPickContacts()" style="cursor:pointer; color:var(--text-color); font-weight:700; font-size:15px;">完成</div>
+    </div>
+    <div class="wx-sub-content" id="pick-contact-list" style="padding:14px 18px;"></div>
+  </div>
+
+  <!-- 聊天界面 -->
+  <div id="wx-chat-screen" class="wx-sub-screen" style="z-index:55; background:#ededed;">
+    <div class="wx-sub-header" style="background:rgba(255,255,255,0.85); backdrop-filter:blur(20px);">
+      <div onclick="closeChat()" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title" id="chat-screen-title">好友</div>
+      <div onclick="openFriendSettings()" style="cursor:pointer; color:var(--text-color); font-size:22px; font-weight:600; line-height:1;">⋯</div>
+    </div>
+    <div id="chat-msg-area" class="wx-sub-content" style="padding:14px; display:flex; flex-direction:column; gap:10px;"></div>
+    <div style="padding:10px 12px 16px; background:#f7f7f7; border-top:1px solid rgba(0,0,0,0.05); display:flex; gap:8px; align-items:center; position:relative;">
+      <button onclick="toggleChatPlus()" id="chat-plus-btn" style="width:36px; height:36px; border-radius:50%; background:#fff; border:1px solid #e0e0e0; color:var(--text-color); font-size:22px; font-weight:300; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:0; line-height:1;">+</button>
+      <input id="chat-input" placeholder="说点什么..." style="flex:1; padding:10px 14px; border-radius:18px; border:1px solid #e0e0e0; outline:none; font-size:14px; background:#fff;" oninput="updateChatSendBtn()" onkeydown="if(event.key==='Enter'){event.preventDefault();handleChatSendBtn();}">
+      <button id="chat-send-btn" onclick="handleChatSendBtn()" style="padding:10px 18px; background:#f0eef5; color:#999; border:none; border-radius:18px; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s;">发送</button>
+    </div>
+    <!-- + 功能面板 -->
+    <div id="chat-plus-panel" style="display:none; position:absolute; bottom:64px; left:0; right:0; background:#f7f7f7; border-top:1px solid rgba(0,0,0,0.05); padding:18px 14px 26px; z-index:10;">
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:18px 8px;" id="chat-plus-grid"></div>
+    </div>
+  </div>
+
+  <!-- 好友设置 -->
+  <div id="wx-friend-settings-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-friend-settings-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">聊天信息</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" id="friend-settings-content" style="padding:18px;"></div>
+    <input type="file" id="friend-bg-file" accept="image/*" style="display:none;" onchange="handleFriendBg(this)">
+    <input type="file" id="import-chat-file" accept=".json,.txt" style="display:none;" onchange="handleImportChat(this)">
+  </div>
+
+  <!-- 微信设置主页 -->
+  <div id="wx-wxsettings-screen" class="wx-sub-screen">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-wxsettings-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">设置</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px;">
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div class="wx-discover-item" onclick="openChatBgSettings()" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#f5eef7; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#bba3d4;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.5"/><path d="M21 16l-5-5L5 21"/></svg>
+          </div>
+          <div style="flex:1;"><div style="font-size:15px; font-weight:700; color:var(--text-color);">聊天背景图</div><div style="font-size:12px; color:#999; margin-top:2px;">默认背景，所有聊天通用</div></div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div class="wx-discover-item" onclick="openBubbleSettings()" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#eef3f5; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#9ab5be;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"/></svg>
+          </div>
+          <div style="flex:1;"><div style="font-size:15px; font-weight:700; color:var(--text-color);">气泡设置</div><div style="font-size:12px; color:#999; margin-top:2px;">自定义CSS，可保存预设</div></div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 聊天背景图 -->
+  <div id="wx-chatbg-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-chatbg-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">聊天背景图</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:24px;">
+      <div style="font-size:13px; color:#999; margin-bottom:14px; padding:0 4px;">设置默认聊天背景。若好友有专属背景，将优先显示专属背景。</div>
+      <div id="chatbg-preview" style="width:100%; aspect-ratio:9/16; max-height:340px; border-radius:24px; background:#f0eef5 center/cover no-repeat; box-shadow:0 8px 25px rgba(0,0,0,0.05); display:flex; align-items:center; justify-content:center; color:#bba3d4; font-size:14px; font-weight:500; margin:0 auto;">暂无背景图</div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button onclick="document.getElementById('chatbg-file').click()" style="flex:1; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">选择图片</button>
+        <button onclick="clearChatBg()" style="flex:1; padding:14px; background:#fff0f3; color:#d97a8c; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">清除</button>
+      </div>
+      <input type="file" id="chatbg-file" accept="image/*" style="display:none;" onchange="handleChatBg(this)">
+    </div>
+  </div>
+
+  <!-- 气泡设置 -->
+  <div id="wx-bubble-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-bubble-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">气泡设置</div>
+      <div onclick="saveCurrentBubble()" style="cursor:pointer; color:var(--text-color); font-weight:700; font-size:15px;">应用</div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+      <div style="background:#fff; border-radius:20px; padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="font-size:13px; color:#888; font-weight:600; margin-bottom:10px;">预设</div>
+        <select id="bubble-preset-select" onchange="loadBubblePreset()" style="width:100%; padding:11px 14px; border-radius:12px; border:1px solid #eee; background:#faf8fc; font-size:14px; outline:none; box-sizing:border-box; color:var(--text-color);">
+          <option value="">-- 新建预设 --</option>
+        </select>
+        <input type="text" id="bubble-preset-name" placeholder="预设名称" style="width:100%; padding:11px 14px; margin-top:10px; border-radius:12px; border:1px solid #eee; background:#faf8fc; font-size:14px; outline:none; box-sizing:border-box; color:var(--text-color);">
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button onclick="saveBubblePreset()" style="flex:1; padding:10px; background:var(--text-color); color:#fff; border:none; border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;">保存预设</button>
+          <button onclick="deleteBubblePreset()" style="flex:1; padding:10px; background:#fff0f3; color:#d97a8c; border:none; border-radius:12px; font-size:13px; font-weight:600; cursor:pointer;">删除预设</button>
+        </div>
+      </div>
+
+      <div style="background:#fff; border-radius:20px; padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="font-size:13px; color:#888; font-weight:600; margin-bottom:10px;">我方气泡 CSS（.bubble-me）</div>
+        <textarea id="bubble-me-css" placeholder="background: #95ec69;\ncolor: #000;\nborder-radius: 12px;\npadding: 10px 14px;" style="width:100%; min-height:120px; border:1px solid #eee; border-radius:12px; padding:12px; font-family:Consolas, Monaco, monospace; font-size:13px; line-height:1.5; outline:none; resize:vertical; box-sizing:border-box; background:#faf8fc; color:var(--text-color);"></textarea>
+      </div>
+
+      <div style="background:#fff; border-radius:20px; padding:16px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="font-size:13px; color:#888; font-weight:600; margin-bottom:10px;">对方气泡 CSS（.bubble-other）</div>
+        <textarea id="bubble-other-css" placeholder="background: #fff;\ncolor: #000;\nborder-radius: 12px;\npadding: 10px 14px;" style="width:100%; min-height:120px; border:1px solid #eee; border-radius:12px; padding:12px; font-family:Consolas, Monaco, monospace; font-size:13px; line-height:1.5; outline:none; resize:vertical; box-sizing:border-box; background:#faf8fc; color:var(--text-color);"></textarea>
+      </div>
+
+      <div style="background:#f0eef5; border-radius:20px; padding:20px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.03);">
+        <div style="font-size:13px; color:#888; font-weight:600; margin-bottom:14px;">效果预览</div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:flex-start;"><div id="bubble-preview-other" style="max-width:75%; padding:10px 14px; background:#fff; border-radius:12px; font-size:14px;">这是对方的消息</div></div>
+          <div style="display:flex; justify-content:flex-end;"><div id="bubble-preview-me" style="max-width:75%; padding:10px 14px; background:#95ec69; border-radius:12px; font-size:14px;">这是我的消息</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 面具列表 -->
+  <div id="wx-mask-list-screen" class="wx-sub-screen">
+    <div class="wx-sub-header">
+      <div onclick="exitMaskMultiSelectOrBack()" style="cursor:pointer; color:var(--text-color);" id="mask-list-back">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </div>
+      <div class="wx-sub-title" id="mask-list-title">面具</div>
+      <div id="mask-list-action" onclick="openMaskEdit(-1)" style="cursor:pointer; font-size:24px; color:var(--text-color); line-height:1;">+</div>
+    </div>
+    <div class="wx-sub-content" id="mask-list-container" style="padding:20px;"></div>
+    <div id="mask-multi-bar" style="display:none; position:absolute; bottom:0; left:0; right:0; background:#fff; padding:14px 20px 24px; box-shadow:0 -4px 20px rgba(0,0,0,0.08); display:none; align-items:center; justify-content:space-between;">
+      <div style="font-size:13px; color:#999;">已选 <span id="mask-selected-count">0</span> 项</div>
+      <button onclick="deleteSelectedMasks()" style="padding:10px 20px; background:#d97a8c; color:#fff; border:none; border-radius:14px; font-size:14px; font-weight:600; cursor:pointer;">删除</button>
+    </div>
+  </div>
+
+  <!-- 面具编辑 -->
+  <div id="wx-mask-edit-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-mask-edit-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title" id="mask-edit-title">添加面具</div>
+      <div onclick="saveMask()" style="cursor:pointer; color:var(--text-color); font-weight:700; font-size:15px;">保存</div>
+    </div>
+    <div class="wx-sub-content" style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+      <div style="background:#fff; border-radius:28px; padding:30px; box-shadow:0 8px 25px rgba(0,0,0,0.03); display:flex; flex-direction:column; align-items:center; gap:12px;">
+        <img id="maskEditAvatar" onclick="openModal('更换面具头像', 'maskEditAvatar', 'image')" src="data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect width='50' height='50' fill='%23f5f5f7'/%3E%3Ctext x='25' y='32' font-size='20' fill='%23ccc' text-anchor='middle'%3E+%3C/text%3E%3C/svg%3E" style="width:85px; height:85px; border-radius:26px; object-fit:cover; border:1px solid rgba(0,0,0,0.05); cursor:pointer;">
+        <div style="font-size:12px; color:#bba3d4; font-weight:600; cursor:pointer;" onclick="openModal('更换面具头像', 'maskEditAvatar', 'image')">点击更换头像</div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:10px 24px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div style="display:flex; align-items:center; padding:14px 0;">
+          <span style="width:65px; font-size:15px; color:#666; font-weight:500;">名字</span>
+          <input type="text" id="mask-edit-name" placeholder="填写面具名称" style="flex:1; border:none; outline:none; font-size:15px; color:var(--text-color); font-weight:600; background:transparent;">
+        </div>
+      </div>
+      <div style="background:#fff; border-radius:24px; padding:18px 22px; box-shadow:0 4px 15px rgba(0,0,0,0.02); display:flex; flex-direction:column; gap:8px;">
+        <div style="font-size:13px; color:#888; font-weight:600;">人设背景</div>
+        <textarea id="mask-edit-persona" placeholder="描述这个面具的性格、背景、口吻..." style="width:100%; min-height:200px; border:none; outline:none; font-size:14px; line-height:1.6; color:var(--text-color); resize:none; background:transparent; font-family:inherit;"></textarea>
+      </div>
+      <button id="mask-delete-btn" onclick="deleteMaskFromEdit()" style="margin-top:8px; padding:14px; background:#fff0f3; color:#d97a8c; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">删除面具</button>
+    </div>
+  </div>
+
+  <!-- 钱包主页 -->
+  <div id="wx-wallet-screen" class="wx-sub-screen">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-wallet-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">钱包</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px;">
+      <div style="background:#fff; border-radius:24px; padding:5px; box-shadow:0 4px 15px rgba(0,0,0,0.02);">
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-balance-screen'); renderBalance();" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#fbf3e8; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#c9a576;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:15px; font-weight:700; color:var(--text-color);">余额</div>
+            <div style="font-size:12px; color:#999; margin-top:2px;">¥<span id="walletBalanceDisplay">0.00</span></div>
+          </div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-bankcards-screen'); renderBankCards();" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#eaf0f7; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#8fa6c4;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="13" rx="2.5"/><path d="M2 10h20M6 15h3"/></svg>
+          </div>
+          <div style="flex:1;"><div style="font-size:15px; font-weight:700; color:var(--text-color);">银行卡</div></div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-familycards-screen'); renderFamilyCards();" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#fbeaf0; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#d4889d;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21.2l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+          </div>
+          <div style="flex:1;"><div style="font-size:15px; font-weight:700; color:var(--text-color);">亲属卡</div></div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+        <div class="wx-discover-item" onclick="openWxSubScreen('wx-yuetong-screen'); renderYuetong();" style="border-radius:18px; border:none; margin-bottom:0; padding:18px 20px;">
+          <div style="width:38px; height:38px; border-radius:12px; background:#e8f2ec; display:flex; align-items:center; justify-content:center; margin-right:14px; color:#8eb89e;">
+            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:15px; font-weight:700; color:var(--text-color);">余额通</div>
+            <div style="font-size:12px; color:#999; margin-top:2px;">¥<span id="walletYuetongDisplay">0.00</span></div>
+          </div>
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="#d1c9db" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 余额页 -->
+  <div id="wx-balance-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-balance-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">余额</div>
+      <div onclick="showRecords('balance')" style="cursor:pointer; font-size:13px; color:var(--text-color); font-weight:600;">消费记录</div>
+    </div>
+    <div class="wx-sub-content" style="padding:30px 24px;">
+      <div style="background:#fff; border-radius:24px; padding:30px; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.03);">
+        <div style="color:#999; font-size:13px; margin-bottom:8px;">零钱（元）</div>
+        <div style="font-size:36px; font-weight:800; color:var(--text-color);">¥<span id="balanceAmount">0.00</span></div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button onclick="openRechargeBalance()" style="flex:1; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">充值</button>
+        <button onclick="openWithdrawBalance()" style="flex:1; padding:14px; background:#f0eef5; color:var(--text-color); border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">提现</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 银行卡列表 -->
+  <div id="wx-bankcards-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-bankcards-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">银行卡</div>
+      <div onclick="openAddBankCard()" style="cursor:pointer; font-size:24px; color:var(--text-color); line-height:1;">+</div>
+    </div>
+    <div class="wx-sub-content" id="bankcards-container" style="padding:20px;"></div>
+  </div>
+
+  <!-- 银行卡详情 -->
+  <div id="wx-bankcard-detail-screen" class="wx-sub-screen" style="z-index:65;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-bankcard-detail-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">银行卡详情</div>
+      <div onclick="showRecords('bank_'+currentBankIdx)" style="cursor:pointer; font-size:13px; color:var(--text-color); font-weight:600;">记录</div>
+    </div>
+    <div class="wx-sub-content" id="bankcard-detail-container" style="padding:24px;"></div>
+  </div>
+
+  <!-- 亲属卡列表 -->
+  <div id="wx-familycards-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-familycards-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">亲属卡</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" style="padding:20px;">
+      <div style="font-size:13px; color:#999; margin-bottom:10px; padding-left:8px;">收到的亲属卡</div>
+      <div id="familycards-received-container"></div>
+      <button onclick="openGiveFamilyCard()" style="width:100%; margin-top:20px; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">赠送亲属卡</button>
+      <div style="font-size:13px; color:#999; margin:20px 0 10px; padding-left:8px;">我赠送的亲属卡</div>
+      <div id="familycards-given-container"></div>
+    </div>
+  </div>
+
+  <!-- 亲属卡详情 -->
+  <div id="wx-familycard-detail-screen" class="wx-sub-screen" style="z-index:65;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-familycard-detail-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">亲属卡详情</div>
+      <div style="width:24px;"></div>
+    </div>
+    <div class="wx-sub-content" id="familycard-detail-container" style="padding:24px;"></div>
+  </div>
+
+  <!-- 余额通 -->
+  <div id="wx-yuetong-screen" class="wx-sub-screen" style="z-index:60;">
+    <div class="wx-sub-header">
+      <div onclick="closeWxSubScreen('wx-yuetong-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="wx-sub-title">余额通</div>
+      <div onclick="showRecords('yuetong')" style="cursor:pointer; font-size:13px; color:var(--text-color); font-weight:600;">记录</div>
+    </div>
+    <div class="wx-sub-content" style="padding:30px 24px;">
+      <div style="background:linear-gradient(135deg, #a8e6c5, #7dd3a0); border-radius:24px; padding:30px; text-align:center; color:#fff; box-shadow:0 8px 24px rgba(125,211,160,0.3);">
+        <div style="font-size:13px; opacity:0.9; margin-bottom:8px;">余额通（元）</div>
+        <div style="font-size:36px; font-weight:800;">¥<span id="yuetongAmount">0.00</span></div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button onclick="openRechargeYuetong()" style="flex:1; padding:14px; background:var(--text-color); color:#fff; border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">充值</button>
+        <button onclick="openWithdrawYuetong()" style="flex:1; padding:14px; background:#f0eef5; color:var(--text-color); border:none; border-radius:18px; font-size:15px; font-weight:600; cursor:pointer;">提现</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通用钱包弹窗 -->
+  <div id="wallet-modal-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); backdrop-filter:blur(8px); z-index:200; display:none; align-items:center; justify-content:center; opacity:0; transition:opacity 0.3s;">
+    <div id="wallet-modal" style="background:#fff; width:85%; max-width:340px; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.15); transform:scale(0.9); transition:transform 0.3s;">
+      <div id="wallet-modal-title" style="text-align:center; font-size:16px; font-weight:700; color:var(--text-color); margin-bottom:18px;">标题</div>
+      <div id="wallet-modal-body"></div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button onclick="closeWalletModal()" style="flex:1; padding:12px; background:#f0eef5; color:var(--text-color); border:none; border-radius:14px; font-size:14px; font-weight:600; cursor:pointer;">取消</button>
+        <button id="wallet-modal-confirm" style="flex:1; padding:12px; background:var(--text-color); color:#fff; border:none; border-radius:14px; font-size:14px; font-weight:600; cursor:pointer;">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 商店子页面 -->
+  <div id="wx-shop-screen" class="wx-sub-screen">
+    <div class="wx-sub-header" style="background:transparent; padding-bottom:4px;">
+      <div onclick="closeWxSubScreen('wx-shop-screen')" style="cursor:pointer; color:var(--text-color);"><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg></div>
+      <div class="shop-search-bar" style="background:#f0eef5; border-radius:20px; padding:6px 14px;"><input type="text" placeholder="探索好物..." id="shop-search-input" style="color:var(--text-color);"></div>
+      <div onclick="generateShopItems()" style="cursor:pointer; color:#bba3d4; font-size:14px; font-weight:bold;">生成</div>
+    </div>
+    
+    <div class="wx-sub-content shop-tab-content" id="shop-page-items">
+       <div style="display:flex; gap:10px; padding:12px 20px; background:transparent;">
+          <div style="padding:8px 18px; background:#fff; border-radius:20px; font-size:12px; color:#887a99; box-shadow:0 4px 10px rgba(0,0,
